@@ -1,7 +1,13 @@
 import os
 import random
+import argparse
 
 logs = []
+parser = argparse.ArgumentParser(description="My program")
+parser.add_argument("--import_from")
+parser.add_argument("--export_to")
+
+args = parser.parse_args()
 
 
 def print_and_log(phrase):
@@ -15,9 +21,37 @@ def input_and_log():
     return user_entry
 
 
+def import_from(file, cards_input, fails_input):
+    if file in os.listdir():
+        n = 0
+        with open(file, "r") as infile:
+            for couple in infile.readlines():
+                term, definition, n_errors = couple.removesuffix("\n").split("|")
+                cards_input[term] = definition
+                fails_input[term] = int(n_errors)
+                n += 1
+        print_and_log(f"{n} cards have been loaded.")
+        return cards_input, fails_input
+    else:
+        print_and_log("File not found.")
+
+
+def export_to(file, cards_input, fails_input):
+    with open(file, "a+") as outfile:
+        for term, definition in cards_input.items():
+            outfile.write(f"{term}|{definition}|{fails_input[term]}\n")
+    print_and_log(f"{len(cards)} cards have been saved.")
+
+
 cards = {}
 fails = {}
 exit_program = False
+
+
+if args.import_from:
+    import_from(args.import_from, cards, fails)
+
+
 while not exit_program:
     print_and_log("Input the action (add, remove, import, export, ask, exit, log, hardest card, reset stats)")
     action = input_and_log()
@@ -46,24 +80,12 @@ while not exit_program:
     elif action == "import":
         print_and_log("File name:")
         file = input_and_log()
-        if file in os.listdir():
-            n = 0
-            with open(file, "r") as infile:
-                for couple in infile.readlines():
-                    term, definition, n_errors = couple.removesuffix("\n").split("|")
-                    cards[term] = definition
-                    fails[term] = int(n_errors)
-                    n += 1
-            print_and_log(f"{n} cards have been loaded.")
-        else:
-            print_and_log("File not found.")
+        if import_from(file, cards, fails):
+            cards, fails = import_from(file, cards, fails)
     elif action == "export":
         print_and_log("File name:")
-        file_name = input_and_log()
-        with open(file_name, "a+") as outfile:
-            for term, definition in cards.items():
-                outfile.write(f"{term}|{definition}|{fails[term]}\n")
-        print_and_log(f"{len(cards)} cards have been saved.")
+        file = input_and_log()
+        export_to(file, cards, fails)
     elif action == "ask":
         print_and_log("How many times to ask?")
         n_times = int(input_and_log())
@@ -85,6 +107,8 @@ while not exit_program:
             j += 1
     elif action == "exit":
         exit_program = True
+        if args.export_to:
+            export_to(args.export_to, cards, fails)
         print_and_log("bye bye")
     elif action == "log":
         print_and_log("File name:")
